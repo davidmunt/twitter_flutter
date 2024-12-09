@@ -1,0 +1,86 @@
+import 'package:dartz/dartz.dart';
+import 'package:flutter_twitter_nueva/data/datasources/user_remote_datasource.dart';
+import 'package:flutter_twitter_nueva/data/models/user_model.dart';
+import 'package:flutter_twitter_nueva/domain/entities/user.dart';
+import 'package:flutter_twitter_nueva/domain/repositories/user_repository.dart';
+import 'package:flutter_twitter_nueva/injection.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class UserRepositoryImpl implements UserRepository {
+  final UserRemoteDatasource remoteDataSource;
+
+  UserRepositoryImpl({required this.remoteDataSource}); 
+
+  @override
+  Future<Either<String, User>> login(String username, String password) async {
+    try {
+      final response = await remoteDataSource.login(username, password);
+      final user = UserModel.fromJson(response);
+      return Right(user);
+    } catch (e) {
+      return Left('Error al hacer login: $e');
+    }
+  }
+
+  @override
+  Future<Either<String, User>> followUser(String userId, String followerId) async {
+    try {
+      final response = await remoteDataSource.followUser(userId, followerId);
+      final user = UserModel.fromJson(response);
+      return Right(user);
+    } catch (e) {
+      return Left('Error al hacer añadir un seguidor: $e');
+    }
+  }
+
+  @override
+  Future<Either<String, User>> getUserInfo(String userId) async {
+    try {
+      final response = await remoteDataSource.getUserInfo(userId);
+      final user = UserModel.fromJson(response);
+      return Right(user);
+    } catch (e) {
+      return Left('Error obteniendo información del usuario: $e');
+    }
+  }
+
+  @override
+  Future<Either<String, User>> updateUser(
+      String userId, String? username, String? avatar) async {
+    try {
+      final response =
+          await remoteDataSource.updateUser(userId, username, avatar);
+      final user = UserModel.fromJson(response['user']);
+      return Right(user);
+    } catch (e) {
+      return Left('Error actualizando la información del usuario: $e');
+    }
+  }
+
+  @override
+  Future<Either<Exception, bool>> isLoggedIn() async {
+    try {
+      final prefs = sl<SharedPreferences>();
+      final userId = prefs.getString('user_id');
+      return Right(userId != null);
+    } catch (e) {
+      return Left(
+          Exception("Error al verificar si el usuario está logueado: $e"));
+    }
+  }
+
+  @override
+  Future<Either<String, List<User>>> getAllUsers() async {
+    try {
+      final response = await remoteDataSource.getAllUsers();
+      final List<User> users = response.entries.map((entry) {
+        final Map<String, dynamic> userJson =
+            entry.value as Map<String, dynamic>;
+        return UserModel.fromJson(userJson);
+      }).toList();
+      return Right(users);
+    } catch (e) {
+      return Left('Error obteniendo información de los usuarios: $e');
+    }
+  }
+}
